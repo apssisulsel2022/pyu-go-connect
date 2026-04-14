@@ -101,7 +101,15 @@ export function PickupSelector({
             <MapPin className="w-4 h-4" />
             Pilih Titik Jemput
           </CardTitle>
-          <p className="text-xs text-muted-foreground">{selectedRoute?.name} • {format(new Date(selectedScheduleDeparture), "dd MMM yyyy, HH:mm")}</p>
+          <p className="text-xs text-muted-foreground">
+            {selectedRoute?.name}
+            {selectedScheduleDeparture && (
+              <>
+                {" • "}
+                {format(new Date(selectedScheduleDeparture), "dd MMM yyyy, HH:mm")}
+              </>
+            )}
+          </p>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="relative">
