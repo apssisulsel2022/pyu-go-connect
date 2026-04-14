@@ -131,7 +131,7 @@ class ShuttleService {
             // Get current pricing rules for service type
             const { data: pricingData, error: pricingError } = await supabase.rpc(
                 'get_current_pricing_for_service',
-                { p_service_type_id: serviceTypeId }
+                { p_service_id: serviceTypeId }
             );
 
             if (pricingError || !pricingData) {
