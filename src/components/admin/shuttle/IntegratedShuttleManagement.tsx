@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
+import PricingRulesTab from "./PricingRulesTab";
 
 interface RouteData {
   id: string;
@@ -886,12 +887,13 @@ export default function IntegratedShuttleManagement() {
 
           {/* Management Tabs */}
           <Tabs defaultValue="overview" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="overview">Ringkasan</TabsTrigger>
               <TabsTrigger value="rayons">Rayons</TabsTrigger>
               <TabsTrigger value="services">Layanan</TabsTrigger>
               <TabsTrigger value="vehicles">Kendaraan</TabsTrigger>
               <TabsTrigger value="schedules">Jadwal</TabsTrigger>
+              <TabsTrigger value="pricing">Tarif</TabsTrigger>
             </TabsList>
 
             {/* Overview Tab */}
@@ -1237,6 +1239,11 @@ export default function IntegratedShuttleManagement() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Pricing Tab */}
+            <TabsContent value="pricing">
+              <PricingRulesTab />
             </TabsContent>
           </Tabs>
         </>

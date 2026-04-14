@@ -38,8 +38,8 @@ export function RouteSelector({ routes, isLoading, onSelectRoute }: RouteSelecto
             </p>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{route.schedules.length} jadwal tersedia</span>
-            <span className="font-bold text-sm text-primary">Rp {route.base_fare.toLocaleString("id-ID")}/kursi</span>
+            <span className="text-xs text-muted-foreground">{(route.shuttle_schedules?.length || 0)} jadwal tersedia</span>
+            <span className="font-bold text-sm text-primary">Rp {route.base_fare?.toLocaleString("id-ID")}/kursi</span>
           </CardContent>
         </Card>
       ))}

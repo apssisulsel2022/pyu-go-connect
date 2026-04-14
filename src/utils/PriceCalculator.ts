@@ -88,25 +88,31 @@ export class PriceCalculator {
         distanceAmount: number;
         rayonSurcharge: number;
         subtotal: number;
-        peakMultiplier: number;
+        peakHoursMultiplier: number;
         totalAmount: number;
+        breakdown: Array<{ label: string; amount: number }>;
     } {
-        const baseAmount = this.calculateBaseAmount(routeFare, baseFareMultiplier);
+        const baseAmount = this.calculateBaseAmount(routeFare, 1.0);
         const servicePremium = this.calculateServicePremium(routeFare, baseFareMultiplier);
         const distanceAmount = this.calculateDistanceCharge(distanceKm, distanceCostPerKm);
         const rayonSurcharge = this.calculateRayonSurcharge(rayonBaseSurcharge, seatCount);
 
-        const subtotal = baseAmount + distanceAmount + rayonSurcharge;
+        const subtotal = baseAmount + servicePremium + distanceAmount + rayonSurcharge;
         const totalAmount = this.applyPeakHoursMultiplier(subtotal, peakHoursMultiplier);
 
+        const result = {
+            baseAmount: Math.round(baseAmount),
+            servicePremium: Math.round(servicePremium),
+            distanceAmount: Math.round(distanceAmount),
+            rayonSurcharge: Math.round(rayonSurcharge),
+            subtotal: Math.round(subtotal),
+            peakHoursMultiplier: peakHoursMultiplier,
+            totalAmount: Math.round(totalAmount),
+        };
+
         return {
-            baseAmount: Math.round(baseAmount * 100) / 100,
-            servicePremium: Math.round(servicePremium * 100) / 100,
-            distanceAmount: Math.round(distanceAmount * 100) / 100,
-            rayonSurcharge: Math.round(rayonSurcharge * 100) / 100,
-            subtotal: Math.round(subtotal * 100) / 100,
-            peakMultiplier: peakHoursMultiplier,
-            totalAmount: Math.round(totalAmount * 100) / 100,
+            ...result,
+            breakdown: this.getPriceBreakdown(result),
         };
     }
 
@@ -137,7 +143,7 @@ export class PriceCalculator {
         servicePremium: number;
         distanceAmount: number;
         rayonSurcharge: number;
-        peakMultiplier: number;
+        peakHoursMultiplier: number;
         totalAmount: number;
     }): Array<{ label: string; amount: number }> {
         const breakdown: Array<{ label: string; amount: number }> = [];
@@ -168,8 +174,8 @@ export class PriceCalculator {
             });
         }
 
-        if (calculatedPrice.peakMultiplier > 1.0) {
-            const peakPortion = (calculatedPrice.peakMultiplier - 1.0) * 
+        if (calculatedPrice.peakHoursMultiplier > 1.0) {
+            const peakPortion = (calculatedPrice.peakHoursMultiplier - 1.0) * 
                 (calculatedPrice.baseAmount + 
                  calculatedPrice.distanceAmount + 
                  calculatedPrice.rayonSurcharge);

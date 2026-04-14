@@ -124,13 +124,18 @@ function ScheduleForm({ schedule, routeId, onClose }: { schedule?: any; routeId:
     queryKey: ["admin-drivers-shuttle"],
     queryFn: async () => {
       try {
-        const { data, error } = await (supabase.from("drivers") as any).select("id, full_name").eq("is_verified", true).order("full_name");
+        const { data, error } = await supabase
+          .from("drivers")
+          .select("id, full_name")
+          .eq("is_verified", true)
+          .order("full_name");
+        
         if (error) {
           console.error("Drivers query error:", error);
           throw error;
         }
         console.log("Drivers loaded:", data);
-        return data;
+        return data || [];
       } catch (err) {
         console.error("Drivers fetch exception:", err);
         throw err;

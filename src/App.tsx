@@ -16,7 +16,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 
 // Lazy-loaded pages
-const Shuttle = lazy(() => import("./pages/Shuttle"));
+const Shuttle = lazy(() => import("./pages/ShuttleRefactored"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Wallet = lazy(() => import("./pages/Wallet"));
 const Hotel = lazy(() => import("./pages/Hotel"));

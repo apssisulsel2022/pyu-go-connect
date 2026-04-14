@@ -447,6 +447,56 @@ class ShuttleService {
     }
 
     /**
+     * Admin: Create or update a route
+     */
+    async upsertRoute(route: any) {
+        const { data, error } = await supabase
+            .from('shuttle_routes')
+            .upsert(route)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    }
+
+    /**
+     * Admin: Delete a route
+     */
+    async deleteRoute(routeId: string) {
+        const { error } = await supabase
+            .from('shuttle_routes')
+            .delete()
+            .eq('id', routeId);
+        if (error) throw error;
+        return true;
+    }
+
+    /**
+     * Admin: Create a rayon with pickup points
+     */
+    async createRayonWithPoints(rayon: any, points: any[]) {
+        const { data: rayonData, error: rayonErr } = await supabase
+            .from('shuttle_rayons')
+            .insert(rayon)
+            .select('id')
+            .single();
+
+        if (rayonErr) throw rayonErr;
+
+        const pointsToInsert = points.map(p => ({
+            ...p,
+            rayon_id: rayonData.id
+        }));
+
+        const { error: pointsErr } = await supabase
+            .from('shuttle_pickup_points')
+            .insert(pointsToInsert);
+
+        if (pointsErr) throw pointsErr;
+        return rayonData;
+    }
+
+    /**
      * Cancel a booking and refund seat
      */
     async cancelBooking(bookingId: string, reason: string): Promise<boolean> {

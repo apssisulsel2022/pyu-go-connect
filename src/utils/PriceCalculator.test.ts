@@ -121,7 +121,8 @@ describe('PriceCalculator', () => {
         rayonBaseSurcharge: 10000,
       });
 
-      expect(result.baseAmount).toBe(150000); // 100000 * 1.5
+      expect(result.baseAmount).toBe(100000); 
+      expect(result.servicePremium).toBe(50000); // 100000 * 0.5
       expect(result.distanceAmount).toBe(250000); // 50 * 5000
       expect(result.rayonSurcharge).toBe(40000); // 10000 * 4
       expect(result.totalAmount).toBeGreaterThan(0);
@@ -197,9 +198,19 @@ describe('PriceCalculator', () => {
       expect(result).toBe('Rp 0');
     });
 
+    it('should handle negative numbers', () => {
+      const result = PriceCalculator.formatPrice(-10000);
+      expect(result).toBe('Rp -10.000');
+    });
+
+    it('should handle large amounts with decimals', () => {
+      const result = PriceCalculator.formatPrice(1250000.5);
+      expect(result).toBe('Rp 1.250.001'); // assuming rounding
+    });
+
     it('should not display decimal places', () => {
-      const result = PriceCalculator.formatPrice(100000);
-      expect(result).not.toContain('.');
+      const result = PriceCalculator.formatPrice(100000.75);
+      expect(result).not.toContain(',');
     });
   });
 
@@ -237,6 +248,35 @@ describe('PriceCalculator', () => {
         expect(item).toHaveProperty('amount');
         expect(typeof item.amount).toBe('number');
       });
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle zero everything in calculateTotal', () => {
+      const result = PriceCalculator.calculateTotal({
+        routeFare: 0,
+        distanceKm: 0,
+        seatCount: 1,
+        baseFareMultiplier: 1.0,
+        distanceCostPerKm: 0,
+        peakHoursMultiplier: 1.0,
+        rayonBaseSurcharge: 0,
+      });
+      expect(result.totalAmount).toBe(0);
+    });
+
+    it('should handle very large numbers in calculateTotal', () => {
+      const result = PriceCalculator.calculateTotal({
+        routeFare: 100000000,
+        distanceKm: 10000,
+        seatCount: 10,
+        baseFareMultiplier: 2.0,
+        distanceCostPerKm: 10000,
+        peakHoursMultiplier: 2.0,
+        rayonBaseSurcharge: 100000,
+      });
+      expect(result.totalAmount).toBeGreaterThan(0);
+      expect(Number.isFinite(result.totalAmount)).toBe(true);
     });
   });
 });
