@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Loader2, 
@@ -94,6 +94,7 @@ export default function Shuttle() {
   } = useShuttleBooking();
 
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   const currentIndex = STEP_LIST.indexOf(step);
   const progress = ((currentIndex + 1) / STEP_LIST.length) * 100;
@@ -105,6 +106,57 @@ export default function Shuttle() {
     }
     setStep('passengers');
   };
+
+  // Auto-validate and advance from validation step
+  useEffect(() => {
+    if (step !== 'validation') return;
+
+    const performValidation = async () => {
+      try {
+        // Validate all booking requirements
+        const validationResult = await ShuttleService.validateBooking(
+          booking.scheduleId!,
+          booking.routeId!,
+          booking.serviceTypeId!,
+          booking.rayonId!,
+          booking.selectedSeats.length,
+          booking.passengers,
+          priceBreakdown?.totalAmount || 0,
+          booking.selectedSeats
+        );
+
+        if (!validationResult.isValid) {
+          // Validation failed - show errors and go back to passengers step
+          setValidationErrors(validationResult.errors);
+          toast.error('Validasi pesanan gagal. Silakan periksa data Anda.');
+          
+          // Wait a moment for user to see error message, then go back
+          setTimeout(() => {
+            setStep('passengers');
+            setValidationErrors([]);
+          }, 2000);
+        } else {
+          // Validation passed - advance to summary
+          setValidationErrors([]);
+          setStep('summary');
+          toast.success('Pesanan Anda telah divalidasi');
+        }
+      } catch (error) {
+        console.error('Validation error:', error);
+        setValidationErrors(['Terjadi kesalahan saat validasi pesanan']);
+        toast.error('Gagal memvalidasi pesanan');
+        
+        setTimeout(() => {
+          setStep('passengers');
+          setValidationErrors([]);
+        }, 2000);
+      }
+    };
+
+    // Add small delay to ensure state is ready
+    const timer = setTimeout(performValidation, 500);
+    return () => clearTimeout(timer);
+  }, [step, booking, priceBreakdown]);
 
   const handleConfirmBooking = async (method: 'CASH' | 'CARD' | 'TRANSFER', gateway?: string) => {
     try {
@@ -343,19 +395,48 @@ export default function Shuttle() {
                   {/* Step 7: Validation */}
                   {step === 'validation' && (
                     <div className="space-y-6 py-12 text-center">
-                      <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
-                      <div className="space-y-2">
-                        <h3 className="text-xl font-bold">Memvalidasi Pesanan...</h3>
-                        <p className="text-muted-foreground">Kami sedang memastikan ketersediaan kursi dan menghitung tarif terbaik untuk Anda.</p>
-                      </div>
-                      <div className="flex justify-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <ShieldCheck className="w-4 h-4 text-green-500" /> Keamanan Terjamin
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4 text-blue-500" /> Respon Cepat
-                        </div>
-                      </div>
+                      {validationErrors.length > 0 ? (
+                        <>
+                          <div className="space-y-4">
+                            <div className="w-12 h-12 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                              <Loader2 className="w-6 h-6 text-red-500 animate-spin" />
+                            </div>
+                            <div className="space-y-2">
+                              <h3 className="text-xl font-bold text-red-600">Validasi Gagal</h3>
+                              <p className="text-muted-foreground">Terjadi masalah dengan pesanan Anda:</p>
+                            </div>
+                          </div>
+                          <Card className="border-red-200 bg-red-50">
+                            <CardContent className="pt-4">
+                              <ul className="space-y-2 text-sm text-left">
+                                {validationErrors.map((error, idx) => (
+                                  <li key={idx} className="flex gap-2">
+                                    <span className="text-red-600 font-bold">•</span>
+                                    <span className="text-red-700">{error}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </CardContent>
+                          </Card>
+                          <p className="text-sm text-muted-foreground">Anda akan dikembalikan ke step sebelumnya untuk memperbaiki data...</p>
+                        </>
+                      ) : (
+                        <>
+                          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto" />
+                          <div className="space-y-2">
+                            <h3 className="text-xl font-bold">Memvalidasi Pesanan...</h3>
+                            <p className="text-muted-foreground">Kami sedang memastikan ketersediaan kursi dan menghitung tarif terbaik untuk Anda.</p>
+                          </div>
+                          <div className="flex justify-center gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <ShieldCheck className="w-4 h-4 text-green-500" /> Keamanan Terjamin
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4 text-blue-500" /> Respon Cepat
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 

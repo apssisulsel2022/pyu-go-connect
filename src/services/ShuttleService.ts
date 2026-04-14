@@ -290,6 +290,97 @@ class ShuttleService {
     }
 
     /**
+     * Validate booking before confirming order
+     * Checks:
+     * - All passengers have name and phone
+     * - Selected seats are still available
+     * - Schedule is still active and available
+     * - Price is still valid
+     */
+    async validateBooking(
+        scheduleId: string,
+        routeId: string,
+        serviceTypeId: string,
+        rayonId: string,
+        seatCount: number,
+        passengers: Array<{ seatNumber: number; name: string; phone: string }>,
+        expectedTotalPrice: number,
+        selectedSeats: number[]
+    ): Promise<{ isValid: boolean; errors: string[] }> {
+        try {
+            const errors: string[] = [];
+
+            // Check 1: Validate all passengers have name and phone
+            if (!passengers || passengers.length === 0) {
+                errors.push('Tidak ada penumpang yang terdaftar');
+            } else {
+                for (const passenger of passengers) {
+                    if (!passenger.name || passenger.name.trim() === '') {
+                        errors.push(`Kursi ${passenger.seatNumber}: Nama penumpang wajib diisi`);
+                    }
+                    if (!passenger.phone || passenger.phone.trim() === '') {
+                        errors.push(`Kursi ${passenger.seatNumber}: Nomor telepon wajib diisi`);
+                    }
+                }
+            }
+
+            // Check 2: Validate schedule is still active
+            const { data: scheduleData, error: scheduleError } = await supabase
+                .from('shuttle_schedules')
+                .select('id, active, available_seats, departure_time')
+                .eq('id', scheduleId)
+                .single();
+
+            if (scheduleError || !scheduleData) {
+                errors.push('Jadwal tidak ditemukan atau telah dihapus');
+            } else if (!scheduleData.active) {
+                errors.push('Jadwal tidak lagi tersedia');
+            } else if (scheduleData.available_seats < seatCount) {
+                errors.push(`Hanya ${scheduleData.available_seats} kursi yang tersedia, Anda memilih ${seatCount}`);
+            } else if (new Date(scheduleData.departure_time) <= new Date()) {
+                errors.push('Jadwal telah berlalu atau sedang berlangsung');
+            }
+
+            // Check 3: Verify price hasn't changed significantly
+            const priceVerification = await this.verifyBookingPrice(
+                routeId,
+                serviceTypeId,
+                rayonId,
+                seatCount,
+                expectedTotalPrice
+            );
+
+            if (!priceVerification.isValid) {
+                errors.push(
+                    `Harga telah berubah dari Rp ${expectedTotalPrice.toLocaleString('id-ID')} menjadi Rp ${priceVerification.calculatedTotal.toLocaleString('id-ID')}. Silakan ulang pemesanan.`
+                );
+            }
+
+            // Check 4: Verify route is still active
+            const { data: routeData, error: routeError } = await supabase
+                .from('shuttle_routes')
+                .select('active')
+                .eq('id', routeId)
+                .single();
+
+            if (routeError || !routeData || !routeData.active) {
+                errors.push('Rute tidak lagi tersedia');
+            }
+
+            return {
+                isValid: errors.length === 0,
+                errors
+            };
+        } catch (error) {
+            console.error('Error validating booking:', error);
+            return {
+                isValid: false,
+                errors: ['Terjadi kesalahan saat validasi pesanan']
+            };
+        }
+    }
+
+    /**
      * Create a booking atomically
      * Handles:
      * - Server-side price verification (prevent fraud)

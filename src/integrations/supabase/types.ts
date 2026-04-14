@@ -2365,7 +2365,7 @@ export type Database = {
         Returns: Json
       }
       get_current_pricing_for_service: {
-        Args: { p_service_type_id: string }
+        Args: { p_service_id: string }
         Returns: Json
       }
       has_role: {
