@@ -114,7 +114,7 @@ export const useShuttleBooking = () => {
 
       if (!schedulesData?.length) return [];
 
-      const { data, error } = await (supabase.from('shuttle_schedule_services') as any)
+      const { data, error } = await (supabase as any).from('shuttle_schedule_services')
         .select('service_type_id, shuttle_service_types(id, name, baggage_info, description)')
         .eq('active' as any, true)
         .in('schedule_id' as any, schedulesData.map((s: any) => s.id));
@@ -134,7 +134,7 @@ export const useShuttleBooking = () => {
     queryFn: async () => {
       if (!booking.routeId || !booking.serviceTypeId || !booking.departureDate) return [];
       
-      const { data: joinedData, error: joinError } = await (supabase.from('shuttle_schedule_services') as any)
+      const { data: joinedData, error: joinError } = await (supabase as any).from('shuttle_schedule_services')
         .select('vehicle_type, shuttle_schedules!inner(route_id, departure_time)')
         .eq('shuttle_schedules.route_id' as any, booking.routeId)
         .eq('service_type_id' as any, booking.serviceTypeId)
@@ -155,7 +155,7 @@ export const useShuttleBooking = () => {
     queryFn: async () => {
       if (!booking.routeId || !booking.serviceTypeId || !booking.vehicleType || !booking.departureDate) return [];
       
-      const { data, error } = await (supabase.from('shuttle_schedule_services') as any)
+      const { data, error } = await (supabase as any).from('shuttle_schedule_services')
         .select('*, shuttle_schedules!inner(id, departure_time, arrival_time, route_id)')
         .eq('shuttle_schedules.route_id' as any, booking.routeId)
         .eq('service_type_id' as any, booking.serviceTypeId)
@@ -200,10 +200,10 @@ export const useShuttleBooking = () => {
   });
 
   // Derived data
-  const selectedRoute = useMemo(() => routes?.find(r => r.id === booking.routeId), [routes, booking.routeId]);
-  const selectedRayon = useMemo(() => routeRayons?.find(r => r.id === booking.rayonId), [routeRayons, booking.rayonId]);
+  const selectedRoute = useMemo(() => routes?.find((r: any) => r.id === booking.routeId), [routes, booking.routeId]);
+  const selectedRayon = useMemo(() => routeRayons?.find((r: any) => r.id === booking.rayonId), [routeRayons, booking.rayonId]);
   const selectedSchedule = useMemo(() => {
-    const s = filteredSchedules?.find(fs => fs.shuttle_schedules.id === booking.scheduleId);
+    const s = filteredSchedules?.find((fs: any) => fs.shuttle_schedules.id === booking.scheduleId);
     return s ? s.shuttle_schedules : null;
   }, [filteredSchedules, booking.scheduleId]);
 

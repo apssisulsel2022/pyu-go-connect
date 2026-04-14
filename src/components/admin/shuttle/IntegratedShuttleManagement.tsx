@@ -19,7 +19,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -39,13 +38,11 @@ import {
   Users,
   Zap,
   Plus,
-  Edit,
   Trash2,
   Loader2,
   AlertCircle,
   ArrowRight,
   Clock,
-  Gauge,
   ArrowUp,
   ArrowDown,
   Trash,
@@ -55,62 +52,12 @@ import { id as idLocale } from "date-fns/locale";
 import PricingRulesTab from "./PricingRulesTab";
 import ShuttleService from "@/services/ShuttleService";
 
-interface RouteData {
-  id: string;
-  name: string;
-  origin: string;
-  destination: string;
-  base_fare: number;
-  distance_km: number;
-  active: boolean;
-}
-
-interface RayonWithPoints {
-  id: string;
-  route_id: string;
-  name: string;
-  description: string;
-  active: boolean;
-  pickup_points: PickupPoint[];
-}
-
 interface PickupPoint {
-  id: string;
-  rayon_id: string;
   stop_order: number;
   name: string;
   departure_time: string;
   distance_meters: number;
   fare: number;
-  active: boolean;
-}
-
-interface ServiceType {
-  id: string;
-  route_id: string;
-  name: string;
-  description: string;
-  active: boolean;
-}
-
-interface VehicleMapping {
-  id: string;
-  route_id: string;
-  service_id: string;
-  vehicle_type: string;
-  capacity: number;
-  facilities: any;
-  active: boolean;
-}
-
-interface Schedule {
-  id: string;
-  route_id: string;
-  service_id: string;
-  vehicle_id: string;
-  departure_time: string;
-  arrival_time: string;
-  available_seats: number;
   active: boolean;
 }
 
@@ -120,7 +67,7 @@ function AddRayonDialog({ routeId, onClose, isOpen }: { routeId: string; onClose
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [points, setPoints] = useState<Omit<PickupPoint, "id" | "rayon_id">[]>([
+  const [points, setPoints] = useState<PickupPoint[]>([
     { stop_order: 1, name: "", departure_time: "", distance_meters: 0, fare: 0, active: true },
   ]);
   const [saving, setSaving] = useState(false);
@@ -600,7 +547,7 @@ function AddScheduleDialog({ routeId, serviceId, vehicleId, onClose, isOpen }: {
       if (scheduleErr) throw scheduleErr;
 
       // Insert into shuttle_schedule_services
-      const { error: serviceErr } = await (supabase.from("shuttle_schedule_services") as any)
+      const { error: serviceErr } = await (supabase as any).from("shuttle_schedule_services")
         .insert({
           schedule_id: scheduleData.id,
           service_type_id: selectedService,
