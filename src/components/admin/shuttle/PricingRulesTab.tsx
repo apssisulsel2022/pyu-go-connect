@@ -34,10 +34,14 @@ interface PricingRule {
   id: string;
   service_type_id: string;
   base_fare_multiplier: number;
-  cost_per_km: number;
-  peak_hours_multiplier: number;
-  base_rayon_surcharge: number;
+  distance_cost_per_km: number;
+  peak_hours_multiplier: number | null;
+  peak_hours_start: string | null;
+  peak_hours_end: string | null;
+  rayon_base_surcharge: number;
+  description: string | null;
   active: boolean;
+  effective_date: string;
   created_at: string;
   updated_at: string;
 }
@@ -47,16 +51,30 @@ interface ServiceType {
   name: string;
 }
 
+interface FormData {
+  service_id: string;
+  base_multiplier: number;
+  distance_cost_per_km: number;
+  peak_multiplier: number;
+  peak_hours_start: string;
+  peak_hours_end: string;
+  rayon_base_surcharge: number;
+  description: string;
+}
+
 export default function PricingRulesTab() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedRule, setSelectedRule] = useState<PricingRule | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     service_id: '',
     base_multiplier: 1.0,
-    cost_per_km: 2000,
+    distance_cost_per_km: 2000,
     peak_multiplier: 1.0,
-    rayon_surcharge: 0,
+    peak_hours_start: '',
+    peak_hours_end: '',
+    rayon_base_surcharge: 0,
+    description: '',
   });
   const queryClient = useQueryClient();
 
@@ -88,7 +106,7 @@ export default function PricingRulesTab() {
 
   // Add rule mutation
   const addMutation = useMutation({
-    mutationFn: async (newRule: any) => {
+    mutationFn: async (newRule: Omit<PricingRule, 'id' | 'created_at' | 'updated_at' | 'effective_date'>) => {
       const { error } = await supabase
         .from('shuttle_pricing_rules')
         .insert([newRule]);
@@ -100,20 +118,23 @@ export default function PricingRulesTab() {
       setFormData({
         service_id: '',
         base_multiplier: 1.0,
-        cost_per_km: 2000,
+        distance_cost_per_km: 2000,
         peak_multiplier: 1.0,
-        rayon_surcharge: 0,
+        peak_hours_start: '',
+        peak_hours_end: '',
+        rayon_base_surcharge: 0,
+        description: '',
       });
       setIsAddOpen(false);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Failed to add pricing rule');
     },
   });
 
   // Update rule mutation
   const updateMutation = useMutation({
-    mutationFn: async (updated: any) => {
+    mutationFn: async (updated: Partial<PricingRule>) => {
       const { error } = await supabase
         .from('shuttle_pricing_rules')
         .update(updated)
@@ -126,7 +147,7 @@ export default function PricingRulesTab() {
       setIsEditOpen(false);
       setSelectedRule(null);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Failed to update pricing rule');
     },
   });
@@ -144,7 +165,7 @@ export default function PricingRulesTab() {
       queryClient.invalidateQueries({ queryKey: ['admin-pricing-rules'] });
       toast.success('Pricing rule deleted');
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || 'Failed to delete pricing rule');
     },
   });
@@ -158,9 +179,12 @@ export default function PricingRulesTab() {
     addMutation.mutate({
       service_type_id: formData.service_id,
       base_fare_multiplier: formData.base_multiplier,
-      cost_per_km: formData.cost_per_km,
+      distance_cost_per_km: formData.distance_cost_per_km,
       peak_hours_multiplier: formData.peak_multiplier,
-      base_rayon_surcharge: formData.rayon_surcharge,
+      peak_hours_start: formData.peak_hours_start || null,
+      peak_hours_end: formData.peak_hours_end || null,
+      rayon_base_surcharge: formData.rayon_base_surcharge,
+      description: formData.description || null,
       active: true,
     });
   };
@@ -171,9 +195,12 @@ export default function PricingRulesTab() {
     updateMutation.mutate({
       service_type_id: formData.service_id,
       base_fare_multiplier: formData.base_multiplier,
-      cost_per_km: formData.cost_per_km,
+      distance_cost_per_km: formData.distance_cost_per_km,
       peak_hours_multiplier: formData.peak_multiplier,
-      base_rayon_surcharge: formData.rayon_surcharge,
+      peak_hours_start: formData.peak_hours_start || null,
+      peak_hours_end: formData.peak_hours_end || null,
+      rayon_base_surcharge: formData.rayon_base_surcharge,
+      description: formData.description || null,
     });
   };
 
@@ -182,15 +209,18 @@ export default function PricingRulesTab() {
     setFormData({
       service_id: rule.service_type_id,
       base_multiplier: rule.base_fare_multiplier,
-      cost_per_km: rule.cost_per_km,
-      peak_multiplier: rule.peak_hours_multiplier,
-      rayon_surcharge: rule.base_rayon_surcharge,
+      distance_cost_per_km: rule.distance_cost_per_km,
+      peak_multiplier: rule.peak_hours_multiplier || 1.0,
+      peak_hours_start: rule.peak_hours_start || '',
+      peak_hours_end: rule.peak_hours_end || '',
+      rayon_base_surcharge: rule.rayon_base_surcharge,
+      description: rule.description || '',
     });
     setIsEditOpen(true);
   };
 
   const getServiceName = (serviceId: string) => {
-    return serviceTypes.find((s: any) => s.id === serviceId)?.name || 'Unknown';
+    return serviceTypes.find((s: ServiceType) => s.id === serviceId)?.name || 'Unknown';
   };
 
   const formatPrice = (amount: number | null | undefined) => {
@@ -256,7 +286,7 @@ export default function PricingRulesTab() {
                 className="w-full border rounded-md p-2 mt-1 bg-background"
               >
                 <option value="">Select Service Type</option>
-                {serviceTypes.map((st: any) => (
+                {serviceTypes.map((st: ServiceType) => (
                   <option key={st.id} value={st.id}>
                     {st.name}
                   </option>
@@ -293,11 +323,11 @@ export default function PricingRulesTab() {
                 type="number"
                 step="100"
                 min="0"
-                value={formData.cost_per_km}
+                value={formData.distance_cost_per_km}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    cost_per_km: parseInt(e.target.value) || 0,
+                    distance_cost_per_km: parseInt(e.target.value) || 0,
                   })
                 }
               />
@@ -337,11 +367,11 @@ export default function PricingRulesTab() {
                 type="number"
                 step="1000"
                 min="0"
-                value={formData.rayon_surcharge}
+                value={formData.rayon_base_surcharge}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    rayon_surcharge: parseInt(e.target.value) || 0,
+                    rayon_base_surcharge: parseInt(e.target.value) || 0,
                   })
                 }
               />
@@ -397,13 +427,13 @@ export default function PricingRulesTab() {
                     </TableCell>
                     <TableCell>{(rule.base_fare_multiplier ?? 1).toFixed(1)}x</TableCell>
                     <TableCell>
-                      Rp {formatPrice(rule.cost_per_km)}
+                      Rp {formatPrice(rule.distance_cost_per_km)}
                     </TableCell>
                     <TableCell>
                       {(rule.peak_hours_multiplier ?? 1).toFixed(1)}x
                     </TableCell>
                     <TableCell>
-                      Rp {formatPrice(rule.base_rayon_surcharge)}
+                      Rp {formatPrice(rule.rayon_base_surcharge)}
                     </TableCell>
                     <TableCell>
                       {rule.active ? (
@@ -466,7 +496,7 @@ export default function PricingRulesTab() {
                 className="w-full border rounded-md p-2 mt-1 bg-background"
               >
                 <option value="">Select Service Type</option>
-                {serviceTypes.map((st: any) => (
+                {serviceTypes.map((st: ServiceType) => (
                   <option key={st.id} value={st.id}>
                     {st.name}
                   </option>
@@ -500,11 +530,11 @@ export default function PricingRulesTab() {
                 type="number"
                 step="100"
                 min="0"
-                value={formData.cost_per_km}
+                value={formData.distance_cost_per_km}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    cost_per_km: parseInt(e.target.value) || 0,
+                    distance_cost_per_km: parseInt(e.target.value) || 0,
                   })
                 }
               />
@@ -538,11 +568,11 @@ export default function PricingRulesTab() {
                 type="number"
                 step="1000"
                 min="0"
-                value={formData.rayon_surcharge}
+                value={formData.rayon_base_surcharge}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    rayon_surcharge: parseInt(e.target.value) || 0,
+                    rayon_base_surcharge: parseInt(e.target.value) || 0,
                   })
                 }
               />

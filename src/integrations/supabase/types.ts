@@ -2244,6 +2244,62 @@ export type Database = {
           },
         ]
       }
+      shuttle_pricing_rules: {
+        Row: {
+          active: boolean
+          base_fare_multiplier: number
+          created_at: string
+          description: string | null
+          distance_cost_per_km: number
+          effective_date: string
+          id: string
+          peak_hours_end: string | null
+          peak_hours_multiplier: number | null
+          peak_hours_start: string | null
+          rayon_base_surcharge: number
+          service_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          base_fare_multiplier?: number
+          created_at?: string
+          description?: string | null
+          distance_cost_per_km?: number
+          effective_date?: string
+          id?: string
+          peak_hours_end?: string | null
+          peak_hours_multiplier?: number | null
+          peak_hours_start?: string | null
+          rayon_base_surcharge?: number
+          service_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          base_fare_multiplier?: number
+          created_at?: string
+          description?: string | null
+          distance_cost_per_km?: number
+          effective_date?: string
+          id?: string
+          peak_hours_end?: string | null
+          peak_hours_multiplier?: number | null
+          peak_hours_start?: string | null
+          rayon_base_surcharge?: number
+          service_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shuttle_pricing_rules_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "shuttle_service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
