@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ import {
 import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import PricingRulesTab from "./PricingRulesTab";
+import ShuttleService from "@/services/ShuttleService";
 
 interface RouteData {
   id: string;
@@ -98,7 +99,7 @@ interface VehicleMapping {
   service_id: string;
   vehicle_type: string;
   capacity: number;
-  facilities: string;
+  facilities: any;
   active: boolean;
 }
 
@@ -172,8 +173,7 @@ function AddRayonDialog({ routeId, onClose, isOpen }: { routeId: string; onClose
 
     setSaving(true);
     try {
-      const { data: rayonData, error: rayonErr } = await supabase
-        .from("shuttle_rayons")
+      const { data: rayonData, error: rayonErr } = await (supabase.from("shuttle_rayons") as any)
         .insert({
           route_id: routeId,
           name,
@@ -195,8 +195,7 @@ function AddRayonDialog({ routeId, onClose, isOpen }: { routeId: string; onClose
         active: p.active,
       }));
 
-      const { error: pointsErr } = await supabase
-        .from("shuttle_pickup_points")
+      const { error: pointsErr } = await (supabase.from("shuttle_pickup_points") as any)
         .insert(pointsToInsert);
 
       if (pointsErr) throw pointsErr;
@@ -375,12 +374,12 @@ function AddServiceDialog({ routeId, onClose, isOpen }: { routeId: string; onClo
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("shuttle_service_types").insert({
+      const { error } = await (supabase.from("shuttle_service_types") as any).insert({
         route_id: routeId,
         name,
         description,
         active: true,
-      });
+      } as any);
 
       if (error) throw error;
 
@@ -453,7 +452,7 @@ function AddVehicleDialog({ routeId, serviceId, onClose, isOpen }: { routeId: st
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("shuttle_service_vehicle_types").insert({
+      const { error } = await (supabase.from("shuttle_service_vehicle_types") as any).insert({
         route_id: routeId,
         service_id: serviceId,
         vehicle_type: vehicleType,
@@ -461,7 +460,7 @@ function AddVehicleDialog({ routeId, serviceId, onClose, isOpen }: { routeId: st
         capacity,
         facilities: facilities ? facilities.split(",").map((f) => f.trim()) : [],
         active: true,
-      });
+      } as any);
 
       if (error) throw error;
 
@@ -535,11 +534,39 @@ function AddScheduleDialog({ routeId, serviceId, vehicleId, onClose, isOpen }: {
   const [departureTime, setDepartureTime] = useState("");
   const [arrivalTime, setArrivalTime] = useState("");
   const [availableSeats, setAvailableSeats] = useState(0);
+  const [selectedService, setSelectedService] = useState(serviceId);
+  const [selectedVehicle, setSelectedVehicle] = useState(vehicleId);
   const [saving, setSaving] = useState(false);
 
+  // Query services and vehicles for selection
+  const { data: services = [] } = useQuery({
+    queryKey: ["admin-dialog-services", routeId],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("shuttle_service_types") as any).select("*").eq("route_id" as any, routeId).eq("active" as any, true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isOpen && !!routeId,
+  });
+
+  const { data: vehicles = [] } = useQuery({
+    queryKey: ["admin-dialog-vehicles", routeId, selectedService],
+    queryFn: async () => {
+      const { data, error } = await (supabase.from("shuttle_service_vehicle_types") as any).select("*").eq("route_id" as any, routeId).eq("service_id" as any, selectedService).eq("active" as any, true);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: isOpen && !!routeId && !!selectedService,
+  });
+
+  useEffect(() => {
+    if (serviceId) setSelectedService(serviceId);
+    if (vehicleId) setSelectedVehicle(vehicleId);
+  }, [serviceId, vehicleId, isOpen]);
+
   const handleSave = async () => {
-    if (!departureTime || !arrivalTime || availableSeats <= 0) {
-      toast.error("Waktu keberangkatan, tiba, dan kapasitas wajib diisi");
+    if (!departureTime || !arrivalTime || availableSeats <= 0 || !selectedService || !selectedVehicle) {
+      toast.error("Semua field wajib diisi");
       return;
     }
 
@@ -548,36 +575,40 @@ function AddScheduleDialog({ routeId, serviceId, vehicleId, onClose, isOpen }: {
       return;
     }
 
+    const vehicle = vehicles.find(v => v.id === selectedVehicle);
+    if (!vehicle) {
+      toast.error("Kendaraan tidak ditemukan");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Insert schedule with service_id
-      const { data: scheduleData, error: scheduleErr } = await supabase
-        .from("shuttle_schedules")
+      // Insert schedule
+      const { data: scheduleData, error: scheduleErr } = await (supabase.from("shuttle_schedules") as any)
         .insert({
           route_id: routeId,
-          service_id: serviceId,
+          service_id: selectedService,
           departure_time: departureTime,
           arrival_time: arrivalTime,
           total_seats: availableSeats,
           available_seats: availableSeats,
           active: true,
-        })
+        } as any)
         .select("id")
         .single();
 
       if (scheduleErr) throw scheduleErr;
 
-      // Insert into shuttle_schedule_services to link service to schedule
-      const { error: serviceErr } = await supabase
-        .from("shuttle_schedule_services")
+      // Insert into shuttle_schedule_services
+      const { error: serviceErr } = await (supabase.from("shuttle_schedule_services") as any)
         .insert({
           schedule_id: scheduleData.id,
-          service_type_id: serviceId,
-          vehicle_type: "standard",
+          service_type_id: selectedService,
+          vehicle_type: vehicle.vehicle_type,
           total_seats: availableSeats,
           available_seats: availableSeats,
           active: true,
-        });
+        } as any);
 
       if (serviceErr) throw serviceErr;
 
@@ -599,10 +630,39 @@ function AddScheduleDialog({ routeId, serviceId, vehicleId, onClose, isOpen }: {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Tambah Jadwal Baru</DialogTitle>
-          <DialogDescription>Buat jadwal keberangkatan untuk kendaraan</DialogDescription>
+          <DialogDescription>Buat jadwal keberangkatan untuk rute ini</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Layanan *</Label>
+              <Select value={selectedService} onValueChange={setSelectedService}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih layanan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Kendaraan *</Label>
+              <Select value={selectedVehicle} onValueChange={setSelectedVehicle} disabled={!selectedService}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih kendaraan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {vehicles.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.vehicle_type} ({v.capacity} kursi)</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Waktu Keberangkatan *</Label>
             <Input
@@ -643,6 +703,47 @@ function AddScheduleDialog({ routeId, serviceId, vehicleId, onClose, isOpen }: {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function FarePreview({ routeId, serviceId, rayonId, seats }: { routeId: string; serviceId: string; rayonId: string; seats: number }) {
+  const { data: preview, isLoading } = useQuery({
+    queryKey: ["admin-fare-preview", routeId, serviceId, rayonId, seats],
+    queryFn: async () => {
+      if (!routeId || !serviceId || !rayonId) return null;
+      return ShuttleService.calculatePrice(routeId, serviceId, rayonId, seats);
+    },
+    enabled: !!routeId && !!serviceId && !!rayonId,
+  });
+
+  if (isLoading) return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
+  if (!preview) return <p className="text-xs text-muted-foreground italic">Pilih konfigurasi di atas untuk simulasi harga</p>;
+
+  return (
+    <div className="bg-white p-3 rounded-lg border border-dashed border-primary/50">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-sm font-semibold">Estimasi Tarif:</span>
+        <span className="text-lg font-bold text-primary">Rp {preview.totalAmount.toLocaleString("id-ID")}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Tarif Dasar:</span>
+          <span>Rp {preview.baseAmount.toLocaleString("id-ID")}</span>
+        </div>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Premium Layanan:</span>
+          <span>Rp {preview.servicePremium.toLocaleString("id-ID")}</span>
+        </div>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Biaya Jarak:</span>
+          <span>Rp {preview.distanceAmount.toLocaleString("id-ID")}</span>
+        </div>
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Surcharge Rayon:</span>
+          <span>Rp {preview.rayonSurcharge.toLocaleString("id-ID")}</span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -688,25 +789,23 @@ export default function IntegratedShuttleManagement() {
     queryKey: ["admin-route-rayons", selectedRoute],
     queryFn: async () => {
       if (!selectedRoute) return [];
-      const { data: rayonsData, error: rayonsErr } = await supabase
-        .from("shuttle_rayons")
+      const { data: rayonsData, error: rayonsErr } = await (supabase.from("shuttle_rayons") as any)
         .select("*")
-        .eq("route_id", selectedRoute);
+        .eq("route_id" as any, selectedRoute);
       if (rayonsErr) throw rayonsErr;
 
-      const { data: pointsData } = await supabase
-        .from("shuttle_pickup_points")
+      const { data: pointsData } = await (supabase.from("shuttle_pickup_points") as any)
         .select("*")
         .in(
-          "rayon_id",
-          rayonsData?.map((r) => r.id) || []
+          "rayon_id" as any,
+          rayonsData?.map((r: any) => r.id) || []
         );
 
-      return (rayonsData || []).map((r) => ({
+      return (rayonsData || []).map((r: any) => ({
         ...r,
         pickup_points: (pointsData || [])
-          .filter((p) => p.rayon_id === r.id)
-          .sort((a, b) => a.stop_order - b.stop_order),
+          .filter((p: any) => p.rayon_id === r.id)
+          .sort((a: any, b: any) => a.stop_order - b.stop_order),
       }));
     },
     enabled: !!selectedRoute,
@@ -717,11 +816,10 @@ export default function IntegratedShuttleManagement() {
     queryKey: ["admin-route-services", selectedRoute],
     queryFn: async () => {
       if (!selectedRoute) return [];
-      const { data, error } = await supabase
-        .from("shuttle_service_types")
+      const { data, error } = await (supabase.from("shuttle_service_types") as any)
         .select("*")
-        .eq("route_id", selectedRoute)
-        .eq("active", true);
+        .eq("route_id" as any, selectedRoute)
+        .eq("active" as any, true);
       if (error) throw error;
       return data || [];
     },
@@ -733,11 +831,10 @@ export default function IntegratedShuttleManagement() {
     queryKey: ["admin-vehicle-service-mappings", selectedRoute],
     queryFn: async () => {
       if (!selectedRoute) return [];
-      const { data, error } = await supabase
-        .from("shuttle_service_vehicle_types")
+      const { data, error } = await (supabase.from("shuttle_service_vehicle_types") as any)
         .select("*")
-        .eq("route_id", selectedRoute)
-        .eq("active", true);
+        .eq("route_id" as any, selectedRoute)
+        .eq("active" as any, true);
       if (error) throw error;
       return data || [];
     },
@@ -749,11 +846,10 @@ export default function IntegratedShuttleManagement() {
     queryKey: ["admin-route-schedules", selectedRoute],
     queryFn: async () => {
       if (!selectedRoute) return [];
-      const { data, error } = await supabase
-        .from("shuttle_schedules")
+      const { data, error } = await (supabase.from("shuttle_schedules") as any)
         .select("*")
-        .eq("route_id", selectedRoute)
-        .eq("active", true)
+        .eq("route_id" as any, selectedRoute)
+        .eq("active" as any, true)
         .order("departure_time");
       if (error) throw error;
       return data || [];
@@ -783,8 +879,7 @@ export default function IntegratedShuttleManagement() {
         schedule: "shuttle_schedules",
       };
 
-      const { error } = await supabase
-        .from(tables[target.type])
+      const { error } = await (supabase.from(tables[target.type] as any) as any)
         .delete()
         .eq("id", target.id);
 
@@ -974,6 +1069,65 @@ export default function IntegratedShuttleManagement() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="pt-4 border-t">
+                    <h4 className="font-semibold mb-3">Simulasi Kalkulasi Tarif</h4>
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="space-y-2">
+                        <Label>Layanan</Label>
+                        <Select 
+                          value={services.length > 0 ? (window as any)._previewService || services[0]?.id : ""} 
+                          onValueChange={(val) => {
+                            (window as any)._previewService = val;
+                            qc.invalidateQueries({ queryKey: ["admin-fare-preview"] });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih layanan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {services.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Rayon</Label>
+                        <Select 
+                          value={rayons.length > 0 ? (window as any)._previewRayon || rayons[0]?.id : ""} 
+                          onValueChange={(val) => {
+                            (window as any)._previewRayon = val;
+                            qc.invalidateQueries({ queryKey: ["admin-fare-preview"] });
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih rayon" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {rayons.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Jumlah Kursi</Label>
+                        <Input 
+                          type="number" 
+                          min="1" 
+                          defaultValue="1" 
+                          onChange={(e) => {
+                            (window as any)._previewSeats = parseInt(e.target.value) || 1;
+                            qc.invalidateQueries({ queryKey: ["admin-fare-preview"] });
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    <FarePreview 
+                      routeId={selectedRoute} 
+                      serviceId={(window as any)._previewService || services[0]?.id} 
+                      rayonId={(window as any)._previewRayon || rayons[0]?.id}
+                      seats={(window as any)._previewSeats || 1}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1143,11 +1297,11 @@ export default function IntegratedShuttleManagement() {
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
-                            {vehicle.facilities && (
+                            {vehicle.facilities && Array.isArray(vehicle.facilities) && (
                               <div>
                                 <p className="text-xs font-semibold mb-1">Fasilitas:</p>
                                 <div className="flex flex-wrap gap-1">
-                                  {vehicle.facilities.split(",").map((f, i) => (
+                                  {vehicle.facilities.map((f: string, i: number) => (
                                     <Badge key={i} variant="secondary" className="text-xs">
                                       {f.trim()}
                                     </Badge>

@@ -46,10 +46,9 @@ export const useShuttleBooking = () => {
   const { data: routes, isLoading: routesLoading } = useQuery({
     queryKey: ['shuttle-routes-all'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('shuttle_routes')
+      const { data, error } = await (supabase.from('shuttle_routes') as any)
         .select('*, shuttle_schedules(id)')
-        .eq('active', true)
+        .eq('active' as any, true)
         .order('name');
       if (error) throw error;
       return data || [];
@@ -60,21 +59,19 @@ export const useShuttleBooking = () => {
     queryKey: ['shuttle-rayons-for-route', booking.routeId],
     queryFn: async () => {
       if (!booking.routeId) return [];
-      const { data: rayonData, error: rayonError } = await supabase
-        .from('shuttle_rayons')
+      const { data: rayonData, error: rayonError } = await (supabase.from('shuttle_rayons') as any)
         .select('*')
-        .eq('route_id', booking.routeId)
-        .eq('active', true)
+        .eq('route_id' as any, booking.routeId)
+        .eq('active' as any, true)
         .order('name');
       
       if (rayonError) throw rayonError;
 
       const rayonIds = (rayonData || []).map((r: any) => r.id);
-      const { data: pointsData } = await supabase
-        .from('shuttle_pickup_points')
+      const { data: pointsData } = await (supabase.from('shuttle_pickup_points') as any)
         .select('*')
-        .eq('active', true)
-        .in('rayon_id', rayonIds)
+        .eq('active' as any, true)
+        .in('rayon_id' as any, rayonIds)
         .order('stop_order');
 
       return (rayonData || []).map((r: any) => ({
@@ -89,17 +86,16 @@ export const useShuttleBooking = () => {
     queryKey: ['shuttle-available-dates', booking.routeId],
     queryFn: async () => {
       if (!booking.routeId) return [];
-      const { data, error } = await supabase
-        .from('shuttle_schedules')
+      const { data, error } = await (supabase.from('shuttle_schedules') as any)
         .select('departure_time')
-        .eq('route_id', booking.routeId)
-        .eq('active', true)
-        .gte('departure_time', new Date().toISOString());
+        .eq('route_id' as any, booking.routeId)
+        .eq('active' as any, true)
+        .gte('departure_time' as any, new Date().toISOString());
       
       if (error) throw error;
       
       const dates = Array.from(new Set((data || []).map((s: any) => s.departure_time.split('T')[0])));
-      return dates.map(d => new Date(d));
+      return dates.map((d: string) => new Date(d));
     },
     enabled: !!booking.routeId,
   });
@@ -109,21 +105,19 @@ export const useShuttleBooking = () => {
     queryFn: async () => {
       if (!booking.routeId || !booking.departureDate) return [];
       
-      const { data: schedulesData } = await supabase
-        .from('shuttle_schedules')
+      const { data: schedulesData } = await (supabase.from('shuttle_schedules') as any)
         .select('id')
-        .eq('route_id', booking.routeId)
-        .eq('active', true)
-        .gte('departure_time', `${booking.departureDate}T00:00:00`)
-        .lte('departure_time', `${booking.departureDate}T23:59:59`);
+        .eq('route_id' as any, booking.routeId)
+        .eq('active' as any, true)
+        .gte('departure_time' as any, `${booking.departureDate}T00:00:00`)
+        .lte('departure_time' as any, `${booking.departureDate}T23:59:59`);
 
       if (!schedulesData?.length) return [];
 
-      const { data, error } = await supabase
-        .from('shuttle_schedule_services')
+      const { data, error } = await (supabase.from('shuttle_schedule_services') as any)
         .select('service_type_id, shuttle_service_types(id, name, baggage_info, description)')
-        .eq('active', true)
-        .in('schedule_id', schedulesData.map((s: any) => s.id));
+        .eq('active' as any, true)
+        .in('schedule_id' as any, schedulesData.map((s: any) => s.id));
 
       if (error) throw error;
 
@@ -140,14 +134,13 @@ export const useShuttleBooking = () => {
     queryFn: async () => {
       if (!booking.routeId || !booking.serviceTypeId || !booking.departureDate) return [];
       
-      const { data: joinedData, error: joinError } = await supabase
-        .from('shuttle_schedule_services')
+      const { data: joinedData, error: joinError } = await (supabase.from('shuttle_schedule_services') as any)
         .select('vehicle_type, shuttle_schedules!inner(route_id, departure_time)')
-        .eq('shuttle_schedules.route_id', booking.routeId)
-        .eq('service_type_id', booking.serviceTypeId)
-        .eq('active', true)
-        .gte('shuttle_schedules.departure_time', `${booking.departureDate}T00:00:00`)
-        .lte('shuttle_schedules.departure_time', `${booking.departureDate}T23:59:59`);
+        .eq('shuttle_schedules.route_id' as any, booking.routeId)
+        .eq('service_type_id' as any, booking.serviceTypeId)
+        .eq('active' as any, true)
+        .gte('shuttle_schedules.departure_time' as any, `${booking.departureDate}T00:00:00`)
+        .lte('shuttle_schedules.departure_time' as any, `${booking.departureDate}T23:59:59`);
 
       if (joinError) throw joinError;
 
@@ -162,16 +155,15 @@ export const useShuttleBooking = () => {
     queryFn: async () => {
       if (!booking.routeId || !booking.serviceTypeId || !booking.vehicleType || !booking.departureDate) return [];
       
-      const { data, error } = await supabase
-        .from('shuttle_schedule_services')
+      const { data, error } = await (supabase.from('shuttle_schedule_services') as any)
         .select('*, shuttle_schedules!inner(id, departure_time, arrival_time, route_id)')
-        .eq('shuttle_schedules.route_id', booking.routeId)
-        .eq('service_type_id', booking.serviceTypeId)
-        .eq('vehicle_type', booking.vehicleType)
-        .eq('active', true)
-        .gte('shuttle_schedules.departure_time', `${booking.departureDate}T00:00:00`)
-        .lte('shuttle_schedules.departure_time', `${booking.departureDate}T23:59:59`)
-        .order('departure_time', { foreignTable: 'shuttle_schedules' });
+        .eq('shuttle_schedules.route_id' as any, booking.routeId)
+        .eq('service_type_id' as any, booking.serviceTypeId)
+        .eq('vehicle_type' as any, booking.vehicleType)
+        .eq('active' as any, true)
+        .gte('shuttle_schedules.departure_time' as any, `${booking.departureDate}T00:00:00`)
+        .lte('shuttle_schedules.departure_time' as any, `${booking.departureDate}T23:59:59`)
+        .order('departure_time' as any, { foreignTable: 'shuttle_schedules' });
 
       if (error) throw error;
       return data || [];
@@ -183,11 +175,10 @@ export const useShuttleBooking = () => {
     queryKey: ['shuttle-seats', booking.scheduleId],
     queryFn: async () => {
       if (!booking.scheduleId) return [];
-      const { data, error } = await supabase
-        .from('shuttle_seats')
+      const { data, error } = await (supabase.from('shuttle_seats') as any)
         .select('*')
-        .eq('schedule_id', booking.scheduleId)
-        .order('seat_number');
+        .eq('schedule_id' as any, booking.scheduleId)
+        .order('seat_number' as any);
       if (error) throw error;
       return data || [];
     },
@@ -198,11 +189,10 @@ export const useShuttleBooking = () => {
     queryKey: ['user-shuttle-bookings', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from('shuttle_bookings')
+      const { data, error } = await (supabase.from('shuttle_bookings') as any)
         .select('*, shuttle_schedules(*, shuttle_routes(name, origin, destination))')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .eq('user_id' as any, user.id)
+        .order('created_at' as any, { ascending: false });
       if (error) throw error;
       return data || [];
     },
