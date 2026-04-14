@@ -28,19 +28,40 @@ export default defineConfig(({ mode }) => ({
       compress: {
         drop_console: true,
         drop_debugger: true,
+        passes: 3,
+      },
+      mangle: true,
+      format: {
+        comments: false,
       },
     },
     chunkSizeWarningLimit: 600,
+    reportCompressedSize: false,
+    cssCodeSplit: true,
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks: {
-          // Split vendor libraries
+          // Core vendor chunks - loaded immediately
           'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          
+          // UI framework - always needed
           'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-select', '@radix-ui/react-tabs', '@radix-ui/react-slot'],
-          'vendor-query': ['@tanstack/react-query'],
+          
+          // Utilities - shared across features
+          'vendor-common': [
+            '@tanstack/react-query',
+            'date-fns',
+            'zustand',
+            'sonner',
+            'clsx',
+            'class-variance-authority',
+            'tailwind-merge'
+          ],
+          
+          // Large libraries - lazy loaded on demand
           'vendor-charts': ['recharts'],
           'vendor-map': ['leaflet', 'react-leaflet'],
-          'vendor-utils': ['date-fns', 'zustand', 'sonner'],
           
           // Split admin features (lazy loaded)
           'admin-bundle': [
@@ -49,18 +70,28 @@ export default defineConfig(({ mode }) => ({
             'src/components/admin/DriverEarningsAnalytics.tsx',
           ],
           
-          // Split driver features
+          // Split driver features (lazy loaded)
           'driver-bundle': [
             'src/pages/driver/DriverDashboard.tsx',
             'src/pages/driver/DriverProfile.tsx',
           ],
           
-          // Split shuttle features
+          // Split shuttle features (lazy loaded)
           'shuttle-bundle': [
             'src/pages/Shuttle.tsx',
             'src/components/shuttle/PickupSelector.tsx',
             'src/components/shuttle/SeatSelector.tsx',
           ],
+        },
+        entryFileNames: 'js/[name]-[hash].js',
+        chunkFileNames: 'js/[name]-[hash].js',
+        assetFileNames: ({ name }) => {
+          if (/\.(gif|jpe?g|png|svg|webp)$/.test(name ?? '')) {
+            return 'images/[name]-[hash][extname]';
+          } else if (/\.css$/.test(name ?? '')) {
+            return 'css/[name]-[hash][extname]';
+          }
+          return 'assets/[name]-[hash][extname]';
         },
       },
     },

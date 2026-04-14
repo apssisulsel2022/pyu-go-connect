@@ -47,7 +47,7 @@ export const useShuttleBooking = () => {
     queryKey: ['shuttle-routes-all'],
     queryFn: async () => {
       const { data, error } = await (supabase.from('shuttle_routes') as any)
-        .select('*, shuttle_schedules(id)')
+        .select('id, name, origin, destination, base_fare, distance_km, active')
         .eq('active' as any, true)
         .order('name');
       if (error) throw error;

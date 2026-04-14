@@ -4,7 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Critical CSS - render blocking styles for above-the-fold content */
 @layer base {
+  /* Font smoothing for better rendering performance */
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
   :root {
     --background: 210 20% 98%;
     --foreground: 220 20% 10%;
