@@ -529,6 +529,59 @@ function ConfigForm({ title, description, env, initialClientKey, onSave, isPendi
 
 // ... (RideFaresTab, ServiceZonesTab, PaymentGatewaysTab tetap sama)
 
+// ─── Auth Settings Tab ──────────────────────────
+function AuthSettingsTab() {
+  const { data: setting, isLoading } = useSetting("auth_settings");
+  const save = useSaveSetting("auth_settings");
+  const [authConfig, setAuthConfig] = useState({ email_verification_required: true });
+
+  useEffect(() => {
+    if (setting?.value) setAuthConfig(setting.value as { email_verification_required: boolean });
+  }, [setting]);
+
+  const toggleVerification = (checked: boolean) => {
+    const newVal = { ...authConfig, email_verification_required: checked };
+    setAuthConfig(newVal);
+    save.mutate(newVal);
+  };
+
+  if (isLoading) return <Loader2 className="w-5 h-5 animate-spin mx-auto mt-8" />;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4" />
+          Authentication Configuration
+        </CardTitle>
+        <CardDescription>Control how users and drivers register on the platform.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-center justify-between p-4 border rounded-lg bg-accent/50">
+          <div className="space-y-0.5">
+            <Label className="text-sm font-semibold">Email Verification Required</Label>
+            <p className="text-xs text-muted-foreground">
+              If disabled, users can log in immediately after signing up without confirming their email.
+            </p>
+          </div>
+          <Switch 
+            checked={authConfig.email_verification_required} 
+            onCheckedChange={toggleVerification}
+            disabled={save.isPending}
+          />
+        </div>
+        
+        {save.isPending && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Saving settings...
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main Settings Page ────────────────────────
 export default function AdminSettings() {
   return (
@@ -540,11 +593,13 @@ export default function AdminSettings() {
           <TabsTrigger value="zones">Service Zones</TabsTrigger>
           <TabsTrigger value="gateways">Payment Gateways</TabsTrigger>
           <TabsTrigger value="midtrans">Midtrans API Keys</TabsTrigger>
+          <TabsTrigger value="auth">Auth Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="fares"><RideFaresTab /></TabsContent>
         <TabsContent value="zones"><ServiceZonesTab /></TabsContent>
         <TabsContent value="gateways"><PaymentGatewaysTab /></TabsContent>
         <TabsContent value="midtrans"><MidtransKeysTab /></TabsContent>
+        <TabsContent value="auth"><AuthSettingsTab /></TabsContent>
       </Tabs>
     </div>
   );

@@ -22,6 +22,28 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
+      // 1. Check if email verification is required
+      const { data: authSetting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "auth_settings")
+        .maybeSingle();
+      
+      const settings = (authSetting?.value as any) || { email_verification_required: true };
+      const emailVerificationRequired = settings.email_verification_required;
+
+      // 2. If verification is NOT required, proactively confirm the email
+      // so that Supabase doesn't block sending the reset link to unconfirmed users.
+      if (!emailVerificationRequired) {
+        console.log("Proactively confirming email for reset password (verification not required)...");
+        await supabase.functions.invoke("register-user", {
+          body: { 
+            action: "confirm_by_email",
+            email 
+          },
+        });
+      }
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });

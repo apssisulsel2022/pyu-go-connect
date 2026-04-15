@@ -145,7 +145,40 @@ export function useAuth() {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: authSetting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "auth_settings")
+        .maybeSingle();
+      
+      const settings = (authSetting?.value as any) || { email_verification_required: true };
+      const emailVerificationRequired = settings.email_verification_required;
+
+      let { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+      // If email is not confirmed but verification is NOT required by app settings,
+      // we attempt to auto-confirm the user via Edge Function and retry sign-in.
+      if (error && error.message.toLowerCase().includes("email not confirmed") && !emailVerificationRequired) {
+        console.log("Email not confirmed but verification is not required. Attempting auto-confirm...");
+        
+        // 1. Get user ID from the error or by searching (Supabase might not return user ID in this error)
+        // Since we can't get user ID easily here without being logged in, 
+        // we'll need the Edge Function to look up the user by email.
+        const { data: confirmData, error: confirmError } = await supabase.functions.invoke("register-user", {
+          body: { 
+            action: "confirm_by_email", // New action
+            email 
+          },
+        });
+
+        if (!confirmError) {
+          // Retry sign-in
+          const retry = await supabase.auth.signInWithPassword({ email, password });
+          data = retry.data;
+          error = retry.error;
+        }
+      }
+
       if (error) {
         handleAuthError(error);
       }
@@ -158,7 +191,17 @@ export function useAuth() {
 
   const signUp = async (email: string, password: string, fullName: string, options?: { phone?: string; license_number?: string; isDriver?: boolean }) => {
     try {
-      // Validasi duplikasi driver sebelum signup
+      // 1. Check for email verification setting
+      const { data: authSetting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "auth_settings")
+        .maybeSingle();
+      
+      const settings = (authSetting?.value as any) || { email_verification_required: true };
+      const emailVerificationRequired = settings.email_verification_required;
+
+      // 2. Validate driver duplication before signup
       if (options?.isDriver) {
         if (options.phone) {
           const { data: existingPhone } = await supabase
@@ -182,7 +225,36 @@ export function useAuth() {
         }
       }
 
-      // Signup — handle_new_user trigger creates profile, role, and driver record automatically
+      // 3. Signup — use Edge Function if verification is disabled for auto-confirm
+      if (!emailVerificationRequired) {
+        const { data, error } = await supabase.functions.invoke("register-user", {
+          body: { 
+            email, 
+            password, 
+            fullName, 
+            options: {
+              ...options,
+              email_confirm: true 
+            }
+          },
+        });
+
+        if (error) {
+          handleAuthError(error);
+          return { error };
+        }
+        
+        // If successful, log in immediately
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) {
+          handleAuthError(signInError);
+          return { error: signInError };
+        }
+        
+        return { error: null, success: true };
+      }
+
+      // Default Signup with Email Verification Required
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

@@ -100,6 +100,23 @@ function getDeviceInfo(): DeviceInfo {
   };
 }
 
+/**
+ * Get a unique identifier for the current browser session
+ * Fallback when Supabase doesn't provide a session ID
+ */
+function getBrowserSessionId(): string {
+  const storageKey = "pyu_browser_session_id";
+  let sessionId = sessionStorage.getItem(storageKey);
+  
+  if (!sessionId) {
+    // Generate a simple unique ID
+    sessionId = `sess-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    sessionStorage.setItem(storageKey, sessionId);
+  }
+  
+  return sessionId;
+}
+
 async function getIpAddress(): Promise<string | undefined> {
   try {
     const response = await fetch("https://api.ipify.org?format=json");
@@ -153,8 +170,11 @@ class SessionManagementService {
       const deviceInfo = getDeviceInfo();
       const ipAddress = await getIpAddress();
       
+      // Use Supabase session ID if available, otherwise fallback to browser session ID
+      const sessionId = (session as any).id || getBrowserSessionId();
+      
       return {
-        sessionId: session.id,
+        sessionId,
         userId: session.user.id,
         deviceInfo,
         createdAt: new Date(session.created_at),
@@ -318,7 +338,7 @@ class SessionManagementService {
       // Store audit log in database
       const auditLog = {
         user_id: session.user.id,
-        session_id: session.id,
+        session_id: (session as any).id || getBrowserSessionId(),
         event,
         ip_address: ipAddress,
         user_agent: navigator.userAgent,
