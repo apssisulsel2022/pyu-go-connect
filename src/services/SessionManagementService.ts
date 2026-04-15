@@ -171,13 +171,13 @@ class SessionManagementService {
       const ipAddress = await getIpAddress();
       
       // Use Supabase session ID if available, otherwise fallback to browser session ID
-      const sessionId = (session as any).id || getBrowserSessionId();
+      const sessionId = session.user.id || getBrowserSessionId();
       
       return {
         sessionId,
         userId: session.user.id,
         deviceInfo,
-        createdAt: new Date(session.created_at),
+        createdAt: new Date(session.user.created_at || new Date().toISOString()),
         lastActivityAt: new Date(),
         expiresAt: new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000),
         refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -338,16 +338,16 @@ class SessionManagementService {
       // Store audit log in database
       const auditLog = {
         user_id: session.user.id,
-        session_id: (session as any).id || getBrowserSessionId(),
+        session_id: session.user.id || getBrowserSessionId(),
         event,
-        ip_address: ipAddress,
-        user_agent: navigator.userAgent,
-        device_info: deviceInfo,
-        details: details || {},
+        ip_address: ipAddress || null,
+        user_agent: navigator.userAgent || null,
+        device_info: deviceInfo as any,
+        details: (details || {}) as any,
       };
       
       const { error } = await supabase
-        .from("session_audit_logs")
+        .from("audit_logs" as any)
         .insert([auditLog]);
       
       if (error) {
@@ -369,7 +369,7 @@ class SessionManagementService {
       if (!session) return [];
       
       const { data, error } = await supabase
-        .from("session_audit_logs")
+        .from("audit_logs" as any)
         .select("*")
         .eq("user_id", session.user.id)
         .eq("event", "LOGIN")
@@ -381,16 +381,16 @@ class SessionManagementService {
         return [];
       }
       
-      return data?.map(log => ({
+      return (data as any[])?.map(log => ({
         sessionId: log.session_id,
         userId: log.user_id,
-        deviceInfo: JSON.parse(log.device_info || "{}"),
+        deviceInfo: typeof log.device_info === 'string' ? JSON.parse(log.device_info || "{}") : (log.device_info || {}),
         createdAt: new Date(log.created_at),
         lastActivityAt: new Date(log.created_at),
         expiresAt: new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000),
         refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        ipAddress: log.ip_address,
-        userAgent: log.user_agent,
+        ipAddress: log.ip_address || undefined,
+        userAgent: log.user_agent || undefined,
       })) || [];
     } catch (error) {
       console.error("Error fetching active sessions:", error);
@@ -407,8 +407,8 @@ class SessionManagementService {
       
       // Mark session as revoked in audit log
       const { error } = await supabase
-        .from("session_audit_logs")
-        .update({ event: "LOGOUT" })
+        .from("audit_logs" as any)
+        .update({ event: "LOGOUT" } as any)
         .eq("session_id", sessionId);
       
       return !error;

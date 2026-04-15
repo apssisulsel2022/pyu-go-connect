@@ -6,7 +6,9 @@ const corsHeaders = {
 };
 
 const supabaseAdmin = createClient(
+  // @ts-ignore: Deno is available in Edge Functions
   Deno.env.get("SUPABASE_URL")!,
+  // @ts-ignore: Deno is available in Edge Functions
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
@@ -24,7 +26,8 @@ interface RegisterRequest {
   };
 }
 
-Deno.serve(async (req) => {
+// @ts-ignore: Deno is available in Edge Functions
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -44,7 +47,7 @@ Deno.serve(async (req) => {
       const { data: users, error: findError } = await supabaseAdmin.auth.admin.listUsers();
       if (findError) throw findError;
       
-      const targetUser = users.users.find(u => u.email === email);
+      const targetUser = users.users.find((u: any) => u.email === email);
       if (!targetUser) {
         throw new Error("User not found");
       }
@@ -107,7 +110,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    console.error(`Error in register-user function (${action}):`, err);
+    console.error(`Error in register-user function:`, err);
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
