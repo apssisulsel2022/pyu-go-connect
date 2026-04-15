@@ -182,10 +182,11 @@ export default function DriverVehiclesTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="car">Car</SelectItem>
-                      <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                      <SelectItem value="bike">Bike</SelectItem>
-                      <SelectItem value="suv">SUV</SelectItem>
+                      <SelectItem value="car">Car (Mobil)</SelectItem>
+                      <SelectItem value="motorcycle">Motorcycle (Bike)</SelectItem>
+                      <SelectItem value="minicar">Mini Car (Shuttle - 4 Seats)</SelectItem>
+                      <SelectItem value="suv">SUV (Shuttle - 7 Seats)</SelectItem>
+                      <SelectItem value="hiace">HiAce (Shuttle - 10-14 Seats)</SelectItem>
                       <SelectItem value="van">Van</SelectItem>
                     </SelectContent>
                   </Select>
@@ -329,10 +330,11 @@ export default function DriverVehiclesTab({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="car">Car</SelectItem>
-                      <SelectItem value="motorcycle">Motorcycle</SelectItem>
-                      <SelectItem value="bike">Bike</SelectItem>
-                      <SelectItem value="suv">SUV</SelectItem>
+                      <SelectItem value="car">Car (Mobil)</SelectItem>
+                      <SelectItem value="motorcycle">Motorcycle (Bike)</SelectItem>
+                      <SelectItem value="minicar">Mini Car (Shuttle - 4 Seats)</SelectItem>
+                      <SelectItem value="suv">SUV (Shuttle - 7 Seats)</SelectItem>
+                      <SelectItem value="hiace">HiAce (Shuttle - 10-14 Seats)</SelectItem>
                       <SelectItem value="van">Van</SelectItem>
                     </SelectContent>
                   </Select>

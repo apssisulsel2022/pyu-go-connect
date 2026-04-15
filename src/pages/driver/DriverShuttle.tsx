@@ -105,7 +105,18 @@ export default function DriverShuttle() {
         p_schedule_id: scheduleId,
         p_driver_id: driver!.id
       });
-      if (error) throw error;
+      
+      if (error) {
+        // Handle custom database exceptions
+        if (error.message.includes("Vehicle type mismatch")) {
+          throw new Error("Tipe kendaraan Anda tidak sesuai dengan persyaratan jadwal ini.");
+        }
+        if (error.message.includes("does not have a verified vehicle")) {
+          throw new Error("Anda belum memiliki kendaraan yang diverifikasi oleh admin.");
+        }
+        throw error;
+      }
+      
       if (!data) throw new Error("Jadwal sudah diambil oleh driver lain.");
       return data;
     },
@@ -117,7 +128,7 @@ export default function DriverShuttle() {
       setPendingTrip(null);
     },
     onError: (error: any) => {
-      toast.error(error.message);
+      toast.error(error.message || "Gagal mengambil jadwal perjalanan.");
       setShowConfirm(false);
     }
   });

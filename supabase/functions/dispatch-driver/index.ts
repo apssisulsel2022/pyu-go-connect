@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Filter drivers by vehicle_type (bike/motorcycle for bike/bike_women services, car for car)
+    // Filter drivers by vehicle_type (motorcycle for bike/bike_women services, car for car)
     const isBikeService = ride.service_type === "bike" || ride.service_type === "bike_women";
     
     const compatibleDrivers = drivers.filter((d: any) => {
@@ -108,15 +108,17 @@ Deno.serve(async (req) => {
       const vType = d.vehicles.vehicle_type;
       
       if (isBikeService) {
-        return vType === "bike" || vType === "motorcycle";
+        // Bike and Bike Women both use motorcycles
+        return vType === "motorcycle";
       } else if (ride.service_type === "car") {
-        return vType === "car";
+        // Car service can be fulfilled by car, minicar, or suv
+        return vType === "car" || vType === "minicar" || vType === "suv";
       }
       return false;
     });
 
     if (compatibleDrivers.length === 0) {
-      const needed = isBikeService ? "bike/motorcycle" : ride.service_type;
+      const needed = isBikeService ? "motorcycle" : "car/minicar/suv";
       return new Response(JSON.stringify({ error: `No compatible ${needed} drivers available`, assigned: false }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

@@ -29,7 +29,9 @@ interface DriverVehicleManagementProps {
 const vehicleTypeLabels: Record<string, string> = {
   car: "Mobil",
   motorcycle: "Motor",
-  bike: "Sepeda",
+  minicar: "Mini Car (4 Kursi)",
+  suv: "SUV (7 Kursi)",
+  hiace: "HiAce (10-14 Kursi)",
   truck: "Truk",
   van: "Van",
 };
@@ -268,9 +270,11 @@ export function DriverVehicleManagement({ driverId }: DriverVehicleManagementPro
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="car">Mobil</SelectItem>
-                  <SelectItem value="motorcycle">Motor</SelectItem>
-                  <SelectItem value="bike">Sepeda</SelectItem>
+                  <SelectItem value="car">Mobil (Car)</SelectItem>
+                  <SelectItem value="motorcycle">Motor (Bike)</SelectItem>
+                  <SelectItem value="minicar">Mini Car (Shuttle - 4 Kursi)</SelectItem>
+                  <SelectItem value="suv">SUV (Shuttle - 7 Kursi)</SelectItem>
+                  <SelectItem value="hiace">HiAce (Shuttle - 10-14 Kursi)</SelectItem>
                   <SelectItem value="truck">Truk</SelectItem>
                   <SelectItem value="van">Van</SelectItem>
                 </SelectContent>
