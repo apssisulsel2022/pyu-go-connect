@@ -29,6 +29,7 @@ interface DriverVehicleManagementProps {
 const vehicleTypeLabels: Record<string, string> = {
   car: "Mobil",
   motorcycle: "Motor",
+  bike: "Sepeda",
   truck: "Truk",
   van: "Van",
 };
@@ -269,6 +270,7 @@ export function DriverVehicleManagement({ driverId }: DriverVehicleManagementPro
                 <SelectContent>
                   <SelectItem value="car">Mobil</SelectItem>
                   <SelectItem value="motorcycle">Motor</SelectItem>
+                  <SelectItem value="bike">Sepeda</SelectItem>
                   <SelectItem value="truck">Truk</SelectItem>
                   <SelectItem value="van">Van</SelectItem>
                 </SelectContent>

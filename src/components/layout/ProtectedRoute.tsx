@@ -40,8 +40,13 @@ export function ProtectedRoute({ requiredRole, requiredPermission }: ProtectedRo
   }
 
   // User is authenticated - check role (only after role is loaded)
-  if (user && role && requiredRole && role !== requiredRole && role !== "admin") {
-    return <Navigate to="/forbidden" state={{ from: location }} replace />;
+  if (user && role && requiredRole) {
+    const isDriverEquivalent = (role === "driver" || role === "moderator") && 
+                               (requiredRole === "driver" || requiredRole === "moderator");
+    
+    if (role !== requiredRole && role !== "admin" && !isDriverEquivalent) {
+      return <Navigate to="/forbidden" state={{ from: location }} replace />;
+    }
   }
 
   // Check permission if required

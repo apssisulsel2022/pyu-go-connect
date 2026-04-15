@@ -112,6 +112,14 @@ const App = () => {
                 </Route>
               </Route>
 
+              {/* Backward compatibility for moderator role */}
+              <Route element={<ProtectedRoute requiredRole="moderator" />}>
+                <Route path="/driver-legacy" element={<DriverLayout />}>
+                  <Route index element={<DriverDashboard />} />
+                  <Route path="profile" element={<DriverProfile />} />
+                </Route>
+              </Route>
+
               <Route path="admin" element={<ProtectedRoute requiredRole="admin" />}>
                 <Route element={<AdminLayout />}>
                   <Route index element={<AdminOverview />} />

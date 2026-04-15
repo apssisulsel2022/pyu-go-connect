@@ -14,7 +14,7 @@ export default function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && role === "driver") {
+    if (!isLoading && (role === "driver" || role === "moderator")) {
       navigate("/driver/profile", { replace: true });
     }
   }, [role, isLoading, navigate]);
@@ -28,7 +28,7 @@ export default function Profile() {
   }
 
   // If driver, show nothing while redirecting
-  if (role === "driver") return null;
+  if (role === "driver" || role === "moderator") return null;
 
   return <UserProfile />;
 }

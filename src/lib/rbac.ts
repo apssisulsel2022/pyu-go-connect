@@ -7,7 +7,7 @@ export type Permission =
   | "admin:dashboard:view" | "admin:user:manage" | "admin:driver:manage"
   | "admin:payment:manage" | "admin:settings:manage";
 
-export type Role = "admin" | "driver" | "user";
+export type Role = "admin" | "driver" | "user" | "moderator";
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   admin: [
@@ -20,6 +20,12 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "admin:payment:manage", "admin:settings:manage"
   ],
   driver: [ // Driver role
+    "ride:read", "ride:update",
+    "shuttle:read",
+    "driver:status:toggle", "driver:location:update",
+    "wallet:view", "wallet:pay"
+  ],
+  moderator: [ // Legacy Driver role (backward compatibility)
     "ride:read", "ride:update",
     "shuttle:read",
     "driver:status:toggle", "driver:location:update",

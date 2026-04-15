@@ -183,6 +183,8 @@ export default function DriverVehiclesTab({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="car">Car</SelectItem>
+                      <SelectItem value="motorcycle">Motorcycle</SelectItem>
+                      <SelectItem value="bike">Bike</SelectItem>
                       <SelectItem value="suv">SUV</SelectItem>
                       <SelectItem value="van">Van</SelectItem>
                     </SelectContent>
@@ -328,6 +330,8 @@ export default function DriverVehiclesTab({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="car">Car</SelectItem>
+                      <SelectItem value="motorcycle">Motorcycle</SelectItem>
+                      <SelectItem value="bike">Bike</SelectItem>
                       <SelectItem value="suv">SUV</SelectItem>
                       <SelectItem value="van">Van</SelectItem>
                     </SelectContent>
