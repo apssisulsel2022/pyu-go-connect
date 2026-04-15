@@ -105,12 +105,23 @@ class ShuttleService {
         }
     }
 
+    // Local cache for AB Test Variations to avoid repeated DB hits
+    private abVariationCache: Map<string, { config: any, timestamp: number }> = new Map();
+    private CACHE_TTL = 300000; // 5 minutes
+
     /**
      * Get current A/B test variation for a user
      * If not assigned, assign based on traffic weights
      */
     async getUserExperimentVariation(userId: string, experimentName: string = 'shuttle_dynamic_pricing'): Promise<any> {
         try {
+            // Check Local Cache first
+            const cacheKey = `${userId}_${experimentName}`;
+            const cached = this.abVariationCache.get(cacheKey);
+            if (cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+                return cached.config;
+            }
+
             // 1. Check if user already assigned to a variation for this experiment
             const { data: existingAssignment } = await supabase
                 .from('user_experiment_assignments')
@@ -119,7 +130,9 @@ class ShuttleService {
                 .single();
 
             if (existingAssignment) {
-                return (existingAssignment.ab_test_variations as any).config;
+                const config = (existingAssignment.ab_test_variations as any).config;
+                this.abVariationCache.set(cacheKey, { config, timestamp: Date.now() });
+                return config;
             }
 
             // 2. If not, get active experiment and variations
@@ -153,7 +166,9 @@ class ShuttleService {
                 variation_id: selectedVariation.id
             });
 
-            return selectedVariation.config;
+            const config = selectedVariation.config;
+            this.abVariationCache.set(cacheKey, { config, timestamp: Date.now() });
+            return config;
         } catch (error) {
             console.error('Error in AB Testing framework:', error);
             return null;

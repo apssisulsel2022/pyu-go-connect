@@ -35,47 +35,54 @@ Deno.serve(async (req) => {
 
     console.log(`Processing ${reminders?.length || 0} maintenance reminders...`);
 
-    for (const rem of (reminders || [])) {
+    // Parallel Processing with Promise.allSettled to ensure all reminders are attempted
+    const processReminder = async (rem: any) => {
       const driver = rem.vehicles.drivers;
       const daysLeft = Math.ceil((new Date(rem.due_date).getTime() - new Date().getTime()) / (1000 * 3600 * 24));
       
       const title = "Reminder Perawatan Kendaraan";
       const body = `Halo ${driver.full_name}, kendaraan ${rem.vehicles.plate_number} memiliki jadwal ${rem.reminder_type} dalam ${daysLeft} hari (${rem.due_date}).`;
 
-      // 1. Send Push Notification
-      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          user_id: driver.user_id,
-          title,
-          body,
-          data: { type: "MAINTENANCE_REMINDER", reminder_id: rem.id }
+      // 1. Send Push Notification & Email in parallel
+      const notifications = [
+        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: driver.user_id,
+            title,
+            body,
+            data: { type: "MAINTENANCE_REMINDER", reminder_id: rem.id }
+          })
+        }),
+        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            to: driver.email,
+            subject: title,
+            html: `<p>${body}</p>`
+          })
         })
-      });
+      ];
 
-      // 2. Send Email
-      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: driver.email,
-          subject: title,
-          html: `<p>${body}</p>`
-        })
-      });
+      await Promise.allSettled(notifications);
 
-      // Update last notified
+      // 2. Update last notified status
       await supabase
         .from("vehicle_reminders")
         .update({ last_notified_at: new Date().toISOString() })
         .eq("id", rem.id);
+    };
+
+    if (reminders && reminders.length > 0) {
+      await Promise.allSettled(reminders.map(processReminder));
     }
 
     return new Response(JSON.stringify({ success: true, processed: reminders?.length }), {

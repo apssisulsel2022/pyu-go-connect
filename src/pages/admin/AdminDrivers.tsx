@@ -183,7 +183,7 @@ export default function AdminDrivers() {
       const to = from + ITEMS_PER_PAGE - 1;
 
       // Check Cache (Simulated Redis)
-      const cacheKey = `drivers_${currentPage}_${searchTerm}_${filterStatus}`;
+      const cacheKey = `drivers_${currentPage}_${searchTerm}_${filterStatus}_${filterRegistration}_${sortBy}`;
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
@@ -229,6 +229,17 @@ export default function AdminDrivers() {
     staleTime: 30000, // 30s client-side cache
   });
 
+  const invalidateAdminCache = () => {
+    // Clear session storage cache for drivers
+    Object.keys(sessionStorage).forEach(key => {
+      if (key.startsWith("drivers_")) {
+        sessionStorage.removeItem(key);
+      }
+    });
+    queryClient.invalidateQueries({ queryKey: ["admin-drivers"] });
+    queryClient.invalidateQueries({ queryKey: ["driver-statistics"] });
+  };
+
   const drivers = data?.drivers || [];
   const totalPages = Math.ceil((data?.totalCount || 0) / ITEMS_PER_PAGE);
 
@@ -264,8 +275,7 @@ export default function AdminDrivers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-drivers"] });
-      queryClient.invalidateQueries({ queryKey: ["driver-statistics"] });
+      invalidateAdminCache();
       toast.success("Status verifikasi driver diperbarui");
       setSelectedDriver(null);
       setShowRejectDialog(false);
@@ -285,7 +295,7 @@ export default function AdminDrivers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-drivers"] });
+      invalidateAdminCache();
       toast.success("Driver berhasil dihentikan");
       setSelectedDriver(null);
     },
@@ -303,7 +313,7 @@ export default function AdminDrivers() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-drivers"] });
+      invalidateAdminCache();
       toast.success("Driver berhasil diaktifkan kembali");
       setSelectedDriver(null);
     },
