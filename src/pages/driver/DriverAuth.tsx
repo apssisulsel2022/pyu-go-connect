@@ -28,7 +28,7 @@ export default function DriverAuth() {
     }
 
     // Session check complete
-    if (user && role === "moderator") {
+    if (user && role === "driver") {
       console.log("[DriverAuth] Active driver session detected - redirecting to driver dashboard", { user: user.email, role });
       const from = location.state?.from?.pathname;
       

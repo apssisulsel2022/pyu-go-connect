@@ -121,6 +121,30 @@ Deno.serve(async (req) => {
     // Mark driver as available
     await supabaseAdmin.from("drivers").update({ status: "available" }).eq("id", ride.driver_id);
 
+    // Notify user via Push Notification (New Implementation)
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: ride.rider_id, // ride.rider_id is from rides table
+          title: "Perjalanan Selesai!",
+          body: `Terima kasih telah menggunakan PYU GO. Total biaya: Rp ${fare.toLocaleString("id-ID")}.`,
+          data: { 
+            ride_id: ride.id,
+            action: "RIDE_COMPLETED",
+            fare: String(fare)
+          },
+          priority: "high"
+        })
+      });
+    } catch (pushErr) {
+      console.error("Failed to send push notification to rider:", pushErr);
+    }
+
     // Create driver_earnings record
     await supabaseAdmin.from("driver_earnings").insert({
       driver_id: ride.driver_id,

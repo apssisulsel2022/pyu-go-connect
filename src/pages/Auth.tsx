@@ -35,7 +35,7 @@ export default function Auth() {
         // Otherwise use default path based on role
         if (role === "admin") {
           navigate("/admin", { replace: true });
-        } else if (role === "moderator") {
+        } else if (role === "driver") {
           navigate("/driver", { replace: true });
         } else {
           navigate("/", { replace: true });

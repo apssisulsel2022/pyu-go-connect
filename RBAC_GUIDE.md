@@ -6,9 +6,9 @@ Sistem RBAC di aplikasi ini dirancang untuk mengelola hak akses pengguna berdasa
 Seluruh definisi roles dan permissions berada di [rbac.ts](file:///d:/PYU-GO/pyu-go-connect/src/lib/rbac.ts).
 
 ### Roles yang Tersedia:
-- `admin`: Memiliki akses penuh ke seluruh sistem.
-- `moderator` (Driver): Dapat mengelola status driver, menerima order, dan melihat dompet.
-- `user`: Dapat melakukan pemesanan, melihat riwayat, dan mengelola profil/dompet.
+- `admin`: Memiliki akses penuh ke seluruh sistem, termasuk manajemen pengguna, driver, pengaturan, dan laporan keuangan.
+- `driver` (sebelumnya `moderator`): Dapat mengelola status driver, menerima order, dan melihat dompet.
+- `user`: Penumpang reguler yang dapat memesan perjalanan, shuttle, dan mengelola profil mereka sendiri.
 
 ### Permissions:
 Permissions menggunakan format `resource:action` (contoh: `ride:create`).

@@ -2562,7 +2562,7 @@ export const Constants = {
   public: {
     Enums: {
       ad_placement: ["dashboard_banner", "sidebar", "popup", "ride_completion"],
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "driver", "user"],
       booking_status: ["confirmed", "cancelled", "completed"],
       driver_status: ["available", "busy", "offline"],
       gender_type: ["male", "female"],

@@ -100,7 +100,7 @@ const App = () => {
               <Route path="/driver/auth" element={<DriverAuth />} />
               <Route path="/forbidden" element={<Forbidden />} />
 
-              <Route element={<ProtectedRoute requiredRole="moderator" />}>
+              <Route element={<ProtectedRoute requiredRole="driver" />}>
                 <Route path="/driver" element={<DriverLayout />}>
                   <Route index element={<DriverDashboard />} />
                   <Route path="ride" element={<DriverActiveRide />} />

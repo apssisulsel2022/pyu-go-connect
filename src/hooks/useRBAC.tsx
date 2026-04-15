@@ -19,7 +19,7 @@ export function useRBAC() {
   };
 
   const isAdmin = role === "admin";
-  const isDriver = role === "moderator";
+  const isDriver = role === "driver";
   const isUser = role === "user";
 
   return {

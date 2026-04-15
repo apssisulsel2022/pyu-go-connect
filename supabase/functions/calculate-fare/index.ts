@@ -67,6 +67,22 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+async function getOSRMDistance(lat1: number, lng1: number, lat2: number, lng2: number): Promise<number | null> {
+  try {
+    const url = `http://router.project-osrm.org/route/v1/driving/${lng1},${lat1};${lng2},${lat2}?overview=false`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.code === "Ok" && data.routes && data.routes.length > 0) {
+      // OSRM returns distance in meters, convert to km
+      return data.routes[0].distance / 1000;
+    }
+  } catch (err) {
+    console.error("OSRM API error:", err);
+  }
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -143,7 +159,14 @@ Deno.serve(async (req) => {
 
     const sType = service_type && fareConfig[service_type] ? service_type : "car";
     const pricing = fareConfig[sType];
-    const distance_km = haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    
+    // Try to get road distance from OSRM, fallback to Haversine
+    let distance_km = await getOSRMDistance(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    const isRoadDistance = distance_km !== null;
+    if (distance_km === null) {
+      console.log("OSRM distance failed, falling back to Haversine");
+      distance_km = haversineKm(pickup_lat, pickup_lng, dropoff_lat, dropoff_lng);
+    }
 
     // Validate distance is reasonable
     if (distance_km < 0.1) {
@@ -175,6 +198,7 @@ Deno.serve(async (req) => {
       surge_multiplier: surgeMultiplier,
       currency: "IDR",
       service_type: sType,
+      is_road_distance: isRoadDistance,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

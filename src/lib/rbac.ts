@@ -7,7 +7,7 @@ export type Permission =
   | "admin:dashboard:view" | "admin:user:manage" | "admin:driver:manage"
   | "admin:payment:manage" | "admin:settings:manage";
 
-export type Role = "admin" | "moderator" | "user";
+export type Role = "admin" | "driver" | "user";
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   admin: [
@@ -19,7 +19,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     "admin:dashboard:view", "admin:user:manage", "admin:driver:manage",
     "admin:payment:manage", "admin:settings:manage"
   ],
-  moderator: [ // Driver role
+  driver: [ // Driver role
     "ride:read", "ride:update",
     "shuttle:read",
     "driver:status:toggle", "driver:location:update",

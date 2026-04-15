@@ -123,10 +123,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Assign driver to ride
+    // Assign driver to ride - CHANGE: Status becomes 'pending' instead of 'accepted'
+    // Driver must manually accept the ride in the app
     const { error: updateErr } = await supabase
       .from("rides")
-      .update({ driver_id: nearest.id, status: "accepted" })
+      .update({ 
+        driver_id: nearest.id, 
+        status: "pending", // Keep it pending but with driver_id assigned
+        updated_at: new Date().toISOString()
+      })
       .eq("id", ride_id);
 
     if (updateErr) {
@@ -135,14 +140,37 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Mark driver as busy
-    await supabase
-      .from("drivers")
-      .update({ status: "busy" })
-      .eq("id", nearest.id);
+    // DO NOT mark driver as busy yet. They are only busy once they accept.
+    // Instead, we could implement a 'notified' or 'offered' state if needed,
+    // but for now, the driver app will listen for rides where driver_id = their_id and status = 'pending'
+
+    // Notify driver via Push Notification (New Implementation)
+    try {
+      await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: nearest.user_id, // We need user_id for the driver
+          title: "Order Baru Tersedia!",
+          body: `Ada pesanan ${ride.service_type} di dekat Anda (Jarak: ${Math.round(minDist * 100) / 100} km).`,
+          data: { 
+            ride_id: ride.id,
+            action: "NEW_RIDE_REQUEST",
+            distance_km: String(Math.round(minDist * 100) / 100)
+          },
+          priority: "high"
+        })
+      });
+    } catch (pushErr) {
+      console.error("Failed to send push notification to driver:", pushErr);
+    }
 
     return new Response(JSON.stringify({
       assigned: true,
+      message: "Ride offered to driver. Waiting for acceptance.",
       driver: {
         id: nearest.id,
         full_name: nearest.full_name,
